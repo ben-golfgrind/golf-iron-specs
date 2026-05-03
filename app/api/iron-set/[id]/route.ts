@@ -6,7 +6,7 @@ import { getIronSet } from "@/lib/iron-sets";
 //
 // Response shape (success):
 //   {
-//     id, modelName, releaseYear, sourceUrl, standardShaftLabel, notes,
+//     id, modelName, releaseYear, sourceUrl, notes,
 //     manufacturer: { id, name, slug },
 //     specs: [{ club, loftDeg, lieDeg, offsetMm, lengthIn }]
 //   }

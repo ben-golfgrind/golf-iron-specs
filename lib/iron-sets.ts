@@ -18,7 +18,6 @@ export type IronSetData = {
   modelName: string;
   releaseYear: number;
   sourceUrl: string;
-  standardShaftLabel: string | null;
   notes: string | null;
   manufacturer: {
     id: number;
@@ -59,7 +58,6 @@ export async function getIronSet(id: number): Promise<IronSetData | null> {
     modelName: row.modelName,
     releaseYear: row.releaseYear,
     sourceUrl: row.sourceUrl,
-    standardShaftLabel: row.standardShaftLabel,
     notes: row.notes,
     manufacturer: row.manufacturer,
     specs: row.specs.map(serializeSpec),

@@ -31,17 +31,16 @@ model Manufacturer {
 }
 
 model IronSet {
-  id                 Int           @id @default(autoincrement())
-  manufacturerId     Int           @map("manufacturer_id")
-  manufacturer       Manufacturer  @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
-  modelName          String        @map("model_name") @db.VarChar(128)
-  releaseYear        Int           @map("release_year")
-  standardShaftLabel String?       @map("standard_shaft_label") @db.VarChar(256)
-  sourceUrl          String        @map("source_url")
-  notes              String?
-  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  specs              IronSetSpec[]
+  id             Int           @id @default(autoincrement())
+  manufacturerId Int           @map("manufacturer_id")
+  manufacturer   Manufacturer  @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
+  modelName      String        @map("model_name") @db.VarChar(128)
+  releaseYear    Int           @map("release_year")
+  sourceUrl      String        @map("source_url")
+  notes          String?
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  specs          IronSetSpec[]
 
   @@unique([manufacturerId, modelName, releaseYear], name: "iron_sets_mfr_model_year_unique")
   @@map("iron_sets")
