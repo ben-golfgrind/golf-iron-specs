@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { ironSets } from "@/lib/db/schema";
+import { getIronSet } from "@/lib/iron-sets";
 
 // GET /api/iron-set/<id>
 // Returns the full iron set + its specs by primary key.
@@ -23,32 +21,10 @@ export async function GET(
     return NextResponse.json({ error: "invalid id" }, { status: 400 });
   }
 
-  const row = await db.query.ironSets.findFirst({
-    where: eq(ironSets.id, id),
-    with: {
-      manufacturer: true,
-      specs: true,
-    },
-  });
-
-  if (!row) {
+  const ironSet = await getIronSet(id);
+  if (!ironSet) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
 
-  return NextResponse.json({
-    id: row.id,
-    modelName: row.modelName,
-    releaseYear: row.releaseYear,
-    sourceUrl: row.sourceUrl,
-    standardShaftLabel: row.standardShaftLabel,
-    notes: row.notes,
-    manufacturer: row.manufacturer,
-    specs: row.specs.map((s) => ({
-      club: s.club,
-      loftDeg: s.loftDeg,
-      lieDeg: s.lieDeg,
-      offsetMm: s.offsetMm,
-      lengthIn: s.lengthIn,
-    })),
-  });
+  return NextResponse.json(ironSet);
 }
