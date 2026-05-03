@@ -1,16 +1,18 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
-import * as schema from "./schema";
+// Prisma client singleton.
+//
+// Next.js dev mode (HMR) re-evaluates server modules on every change, which
+// would otherwise spin up a fresh PrismaClient per change and exhaust DB
+// connections. The standard pattern is to cache the client on globalThis in
+// non-production so HMR reuses it.
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  throw new Error(
-    "DATABASE_URL is not set. Add it to .env.local (see .env.local.example).",
-  );
+import { PrismaClient } from "@prisma/client";
+
+const globalForPrisma = globalThis as unknown as {
+  prisma?: PrismaClient;
+};
+
+export const db = globalForPrisma.prisma ?? new PrismaClient();
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = db;
 }
-
-const sql = neon(databaseUrl);
-
-export const db = drizzle(sql, { schema });
-
-export * from "./schema";

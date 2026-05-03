@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq, desc, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { manufacturers, ironSets } from "@/lib/db/schema";
 
 // GET /api/years?maker=<slug>
 // Returns distinct years that this manufacturer has iron sets in,
@@ -17,12 +15,12 @@ export async function GET(req: Request) {
     );
   }
 
-  const rows = await db
-    .selectDistinct({ year: ironSets.releaseYear })
-    .from(ironSets)
-    .innerJoin(manufacturers, sql`${ironSets.manufacturerId} = ${manufacturers.id}`)
-    .where(eq(manufacturers.slug, makerSlug))
-    .orderBy(desc(ironSets.releaseYear));
+  const rows = await db.ironSet.findMany({
+    where: { manufacturer: { slug: makerSlug } },
+    select: { releaseYear: true },
+    distinct: ["releaseYear"],
+    orderBy: { releaseYear: "desc" },
+  });
 
-  return NextResponse.json(rows.map((r) => r.year));
+  return NextResponse.json(rows.map((r) => r.releaseYear));
 }

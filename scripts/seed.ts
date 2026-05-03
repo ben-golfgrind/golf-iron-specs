@@ -1,23 +1,16 @@
 import "dotenv/config";
-import { eq, and } from "drizzle-orm";
 import { db } from "@/lib/db";
-import {
-  manufacturers,
-  ironSets,
-  ironSetSpecs,
-  type ClubNumber,
-} from "@/lib/db/schema";
 
 // Phase 1 seed data: 2025 Titleist T100.
 // Source: https://fairwayjockey.com/products/titleist-2025-t100-custom-irons
 // The Fairway Jockey spec table publishes loft / lie / length per club, but no
 // offset values, so offset is left null for every row. The "W" wedge is mapped
-// to our enum's "GW" (gap wedge).
+// to "GW" (gap wedge).
 const SOURCE_URL =
   "https://fairwayjockey.com/products/titleist-2025-t100-custom-irons";
 
 type SeedSpec = {
-  club: ClubNumber;
+  club: string;
   loftDeg: number | null;
   lieDeg: number | null;
   offsetMm: number | null;
@@ -36,83 +29,59 @@ const T100_2025_SPECS: SeedSpec[] = [
   { club: "GW", loftDeg: 49.0, lieDeg: 64.0, offsetMm: null, lengthIn: 35.5 },
 ];
 
-function toNumericString(value: number | null): string | null {
-  return value === null ? null : value.toString();
-}
-
 async function main() {
   console.log("Seeding database...");
 
   // Upsert Titleist manufacturer.
-  const titleistName = "Titleist";
-  const titleistSlug = "titleist";
-  let titleist = await db.query.manufacturers.findFirst({
-    where: eq(manufacturers.slug, titleistSlug),
+  const titleist = await db.manufacturer.upsert({
+    where: { slug: "titleist" },
+    update: {},
+    create: { name: "Titleist", slug: "titleist" },
   });
-  if (!titleist) {
-    [titleist] = await db
-      .insert(manufacturers)
-      .values({ name: titleistName, slug: titleistSlug })
-      .returning();
-    console.log(`  Inserted manufacturer: ${titleist.name} (id=${titleist.id})`);
-  } else {
-    console.log(
-      `  Manufacturer already exists: ${titleist.name} (id=${titleist.id})`,
-    );
-  }
+  console.log(`  Manufacturer: ${titleist.name} (id=${titleist.id})`);
 
   // Upsert iron set: Titleist T100 (2025).
   const modelName = "T100";
   const releaseYear = 2025;
-  let t100 = await db.query.ironSets.findFirst({
-    where: and(
-      eq(ironSets.manufacturerId, titleist.id),
-      eq(ironSets.modelName, modelName),
-      eq(ironSets.releaseYear, releaseYear),
-    ),
-  });
-  if (!t100) {
-    [t100] = await db
-      .insert(ironSets)
-      .values({
+  const ironSet = await db.ironSet.upsert({
+    where: {
+      iron_sets_mfr_model_year_unique: {
         manufacturerId: titleist.id,
         modelName,
         releaseYear,
-        standardShaftLabel: null,
-        sourceUrl: SOURCE_URL,
-        notes: null,
-      })
-      .returning();
-    console.log(
-      `  Inserted iron set: ${releaseYear} ${titleist.name} ${modelName} (id=${t100.id})`,
-    );
-  } else {
-    console.log(
-      `  Iron set already exists: ${releaseYear} ${titleist.name} ${modelName} (id=${t100.id})`,
-    );
-  }
-
-  // Upsert per-club specs. We delete-and-replace for idempotency on re-runs.
-  await db.delete(ironSetSpecs).where(eq(ironSetSpecs.ironSetId, t100.id));
-  await db.insert(ironSetSpecs).values(
-    T100_2025_SPECS.map((s) => ({
-      ironSetId: t100!.id,
-      club: s.club,
-      loftDeg: toNumericString(s.loftDeg),
-      lieDeg: toNumericString(s.lieDeg),
-      offsetMm: toNumericString(s.offsetMm),
-      lengthIn: toNumericString(s.lengthIn),
-    })),
+      },
+    },
+    update: { sourceUrl: SOURCE_URL },
+    create: {
+      manufacturerId: titleist.id,
+      modelName,
+      releaseYear,
+      sourceUrl: SOURCE_URL,
+    },
+  });
+  console.log(
+    `  Iron set: ${releaseYear} ${titleist.name} ${modelName} (id=${ironSet.id})`,
   );
+
+  // Replace specs idempotently: delete existing rows for this iron set, then
+  // insert the canonical list. Avoids drift when seed values are tweaked.
+  await db.ironSetSpec.deleteMany({ where: { ironSetId: ironSet.id } });
+  await db.ironSetSpec.createMany({
+    data: T100_2025_SPECS.map((s) => ({
+      ironSetId: ironSet.id,
+      club: s.club,
+      loftDeg: s.loftDeg,
+      lieDeg: s.lieDeg,
+      offsetMm: s.offsetMm,
+      lengthIn: s.lengthIn,
+    })),
+  });
   console.log(`  Inserted ${T100_2025_SPECS.length} spec rows`);
 
   // Verification read-back.
-  const verify = await db.query.ironSets.findFirst({
-    where: eq(ironSets.id, t100.id),
-    with: {
-      manufacturer: true,
-      specs: true,
-    },
+  const verify = await db.ironSet.findUnique({
+    where: { id: ironSet.id },
+    include: { manufacturer: true, specs: true },
   });
   if (!verify) {
     throw new Error("Verification read-back failed: iron set not found");
@@ -126,7 +95,7 @@ async function main() {
   console.log(`  specs (${verify.specs.length} rows):`);
   for (const s of verify.specs) {
     console.log(
-      `    ${s.club.padEnd(3)}  loft=${s.loftDeg ?? "-"}  lie=${s.lieDeg ?? "-"}  offset=${s.offsetMm ?? "-"}  length=${s.lengthIn ?? "-"}`,
+      `    ${s.club.padEnd(3)}  loft=${s.loftDeg?.toString() ?? "-"}  lie=${s.lieDeg?.toString() ?? "-"}  offset=${s.offsetMm?.toString() ?? "-"}  length=${s.lengthIn?.toString() ?? "-"}`,
     );
   }
   console.log("");
@@ -134,8 +103,12 @@ async function main() {
 }
 
 main()
-  .then(() => process.exit(0))
-  .catch((err) => {
+  .then(async () => {
+    await db.$disconnect();
+    process.exit(0);
+  })
+  .catch(async (err) => {
     console.error("Seed failed:", err);
+    await db.$disconnect();
     process.exit(1);
   });

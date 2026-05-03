@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { manufacturers, ironSets } from "@/lib/db/schema";
 
 // GET /api/models?maker=<slug>&year=<n>
 // Returns all iron sets for that maker+year, with their IDs so the client
@@ -20,15 +18,17 @@ export async function GET(req: Request) {
     );
   }
 
-  const rows = await db
-    .select({
-      id: ironSets.id,
-      name: ironSets.modelName,
-    })
-    .from(ironSets)
-    .innerJoin(manufacturers, sql`${ironSets.manufacturerId} = ${manufacturers.id}`)
-    .where(and(eq(manufacturers.slug, makerSlug), eq(ironSets.releaseYear, year)))
-    .orderBy(ironSets.modelName);
+  const rows = await db.ironSet.findMany({
+    where: {
+      manufacturer: { slug: makerSlug },
+      releaseYear: year,
+    },
+    select: {
+      id: true,
+      modelName: true,
+    },
+    orderBy: { modelName: "asc" },
+  });
 
-  return NextResponse.json(rows);
+  return NextResponse.json(rows.map((r) => ({ id: r.id, name: r.modelName })));
 }
