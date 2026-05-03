@@ -2,25 +2,45 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #14181d;
+
+  --color-green-deep: #0f4d2a;
+  --color-green-medium: #1a6b3d;
+  --color-green-soft: #2a8651;
+  --color-row-light: #f7f8f4;
+  --color-row-dark: #ecede6;
+  --color-border-soft: #d8dcd2;
+  --color-muted: #6b7468;
+
+  --color-delta-positive: #2a7a4a;
+  --color-delta-negative: #b04a2a;
+  --color-delta-zero: #9ca39a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-green-deep: var(--color-green-deep);
+  --color-green-medium: var(--color-green-medium);
+  --color-green-soft: var(--color-green-soft);
+  --color-row-light: var(--color-row-light);
+  --color-row-dark: var(--color-row-dark);
+  --color-border-soft: var(--color-border-soft);
+  --color-muted: var(--color-muted);
+  --color-delta-positive: var(--color-delta-positive);
+  --color-delta-negative: var(--color-delta-negative);
+  --color-delta-zero: var(--color-delta-zero);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+.spec-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
