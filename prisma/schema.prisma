@@ -1,0 +1,67 @@
+// Prisma schema for the iron specs catalog.
+// Three tables: manufacturers -> iron_sets -> iron_set_specs.
+//
+// Notes:
+// - Snake_case table and column names are preserved via @map / @@map so existing
+//   SQL ergonomics (and the names the API routes were using under Drizzle) are
+//   unchanged.
+// - club is a plain VARCHAR rather than a Postgres enum because Prisma enum
+//   members can't begin with a digit (1i, 2i, ...). Validation moves to
+//   application code (the CSV importer in Phase 3b).
+// - All four spec fields are nullable: manufacturers commonly omit one or more
+//   of loft / lie / offset / length. The UI renders a dash for nulls.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Manufacturer {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique @db.VarChar(128)
+  slug      String    @unique @db.VarChar(128)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  ironSets  IronSet[]
+
+  @@map("manufacturers")
+}
+
+model IronSet {
+  id                 Int           @id @default(autoincrement())
+  manufacturerId     Int           @map("manufacturer_id")
+  manufacturer       Manufacturer  @relation(fields: [manufacturerId], references: [id], onDelete: Restrict)
+  modelName          String        @map("model_name") @db.VarChar(128)
+  releaseYear        Int           @map("release_year")
+  standardShaftLabel String?       @map("standard_shaft_label") @db.VarChar(256)
+  sourceUrl          String        @map("source_url")
+  notes              String?
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  specs              IronSetSpec[]
+
+  @@unique([manufacturerId, modelName, releaseYear], name: "iron_sets_mfr_model_year_unique")
+  @@map("iron_sets")
+}
+
+// Numeric precisions chosen to match what manufacturers actually publish:
+//   loft_deg:    NN.N    (e.g. 21.0, 21.5)
+//   lie_deg:     NN.N    (e.g. 60.5)
+//   offset_mm:   N.NN    (e.g. 3.50, 4.20)
+//   length_in:   NN.NNN  (e.g. 39.000, 38.875 -- 1/8" increments)
+model IronSetSpec {
+  id        Int      @id @default(autoincrement())
+  ironSetId Int      @map("iron_set_id")
+  ironSet   IronSet  @relation(fields: [ironSetId], references: [id], onDelete: Cascade)
+  club      String   @db.VarChar(4)
+  loftDeg   Decimal? @map("loft_deg") @db.Decimal(4, 1)
+  lieDeg    Decimal? @map("lie_deg") @db.Decimal(4, 1)
+  offsetMm  Decimal? @map("offset_mm") @db.Decimal(4, 2)
+  lengthIn  Decimal? @map("length_in") @db.Decimal(5, 3)
+
+  @@unique([ironSetId, club], name: "iron_set_specs_set_club_unique")
+  @@map("iron_set_specs")
+}
