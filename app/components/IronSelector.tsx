@@ -172,9 +172,6 @@ function IronSelectorInner({ label, makers, selectedIron, onSelect }: Props) {
           >
             View source
           </a>
-          {selectedIron.standardShaftLabel ? (
-            <span className="ml-3">{selectedIron.standardShaftLabel}</span>
-          ) : null}
         </div>
       )}
     </div>

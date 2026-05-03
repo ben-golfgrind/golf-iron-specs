@@ -101,7 +101,7 @@ Open [http://localhost:3000](http://localhost:3000).
 Three tables:
 
 - **`manufacturers`** — `(id, name, slug, created_at)`. Unique on name and slug.
-- **`iron_sets`** — `(id, manufacturer_id, model_name, release_year, standard_shaft_label, source_url, notes, created_at, updated_at)`. Unique on `(manufacturer_id, model_name, release_year)`.
+- **`iron_sets`** — `(id, manufacturer_id, model_name, release_year, source_url, notes, created_at, updated_at)`. Unique on `(manufacturer_id, model_name, release_year)`.
 - **`iron_set_specs`** — `(id, iron_set_id, club, loft_deg, lie_deg, offset_mm, length_in)`. Unique on `(iron_set_id, club)`. All four spec fields are nullable so missing data stores cleanly.
 
 The `club` column uses a Postgres enum: `1i, 2i, 3i, 4i, 5i, 6i, 7i, 8i, 9i, PW, GW, AW, SW, LW`.
